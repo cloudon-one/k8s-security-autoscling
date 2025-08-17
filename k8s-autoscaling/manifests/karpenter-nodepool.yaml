@@ -1,0 +1,29 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: workers-spot
+  namespace: karpenter
+spec:
+  template:
+    metadata:
+      labels:
+        workload: workers
+    spec:
+      taints:
+        - key: spot
+          value: "true"
+          effect: NoSchedule
+      requirements:
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["c", "m"]
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["5"]
+      nodeClassRef:
+        name: workers-spot
+  disruption:
+    consolidationPolicy: WhenUnderutilized
+    expireAfter: 72h
+  limits:
+    cpu: 1000

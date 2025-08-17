@@ -1,0 +1,17 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: orders-consumer
+  namespace: default
+spec:
+  scaleTargetRef:
+    name: orders-consumer
+  minReplicaCount: 0
+  maxReplicaCount: 200
+  cooldownPeriod: 60
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        queueURL: https://sqs.eu-central-1.amazonaws.com/123456789012/orders
+        queueLength: "100"
+        awsRegion: eu-central-1
