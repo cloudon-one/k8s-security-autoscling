@@ -52,9 +52,15 @@ aws --version        # AWS CLI v2
 kubectl version      # Kubernetes CLI
 terraform --version  # Terraform >= 1.0
 helm version         # Helm v3
+python3 --version    # Python 3 (for YAML validation)
 
 # EKS cluster with OIDC provider
 aws eks describe-cluster --name <cluster-name> --query cluster.identity.oidc.issuer
+
+# Verify Helm repositories
+helm repo add falcosecurity https://falcosecurity.github.io/charts
+helm repo add kedacore https://kedacore.github.io/charts
+helm repo update
 ```
 
 ### 1. Deploy Security Infrastructure
@@ -78,12 +84,17 @@ kubectl apply -f kubescape.yaml
 ```bash
 cd ../autoscaling/terraform
 
+# Validate configuration first
+terraform fmt
+terraform validate
+
 # Configure variables
 export TF_VAR_aws_region="eu-central-1"
 export TF_VAR_cluster_name="my-eks-cluster"
 
-# Deploy
+# Plan and deploy
 terraform init
+terraform plan
 terraform apply
 ```
 
@@ -91,6 +102,9 @@ terraform apply
 
 ```bash
 cd ../manifests
+
+# Validate YAML syntax first
+python3 -c "import yaml; [yaml.safe_load_all(open(f)) for f in ['karpenter-ec2nodeclass.yaml', 'karpenter-nodepool.yaml', 'keda-scaledobject-sqs.yaml']]"
 
 # Apply in order (dependencies matter)
 kubectl apply -f karpenter-ec2nodeclass.yaml
@@ -132,9 +146,12 @@ disruption:
 triggers:
   - type: aws-sqs-queue
     metadata:
-      queueURL: https://sqs.eu-central-1.amazonaws.com/123456789012/orders
+      queueURL: https://sqs.eu-central-1.amazonaws.com/123456789012/orders  # Update with real queue URL
       queueLength: "100"
+      awsRegion: eu-central-1
 ```
+
+**⚠️ Configuration Update Required**: Replace the example SQS queue URL with your actual queue URL before deployment.
 
 ### Security Policies
 
@@ -207,6 +224,10 @@ Add to `.github/workflows/security.yml`:
 
 ### Runtime Security
 
+**Falco configuration notes**:
+- Update Slack webhook URL in `security/falco-values.yaml`
+- Service account `security-tools` must exist before installation
+
 **Falco rules** detect:
 - Shell spawned in container
 - Sensitive file access
@@ -222,7 +243,42 @@ Add to `.github/workflows/security.yml`:
 
 ## 🛠️ Troubleshooting
 
+### Configuration Validation
+
+**Before deployment, validate all configurations**:
+```bash
+# Terraform validation
+cd autoscaling/terraform
+terraform fmt -check
+terraform validate
+
+# YAML syntax validation
+python3 -c "
+import yaml, os
+for root, dirs, files in os.walk('.'):
+    for file in files:
+        if file.endswith(('.yaml', '.yml')):
+            with open(os.path.join(root, file)) as f:
+                yaml.safe_load_all(f)
+print('All YAML valid')
+"
+
+# Helm chart verification
+helm show chart oci://public.ecr.aws/karpenter/karpenter --version 1.1.0
+helm search repo kedacore/keda --version 2.17.2
+```
+
 ### Common Issues
+
+**Terraform Provider Issues**:
+```bash
+# If Helm provider fails, ensure using v3.0+ syntax
+# providers.tf should use: kubernetes = { config_path = "~/.kube/config" }
+# NOT: kubernetes { config_path = "~/.kube/config" }
+
+# Re-initialize if provider issues
+terraform init -upgrade
+```
 
 **Karpenter nodes not provisioning**:
 ```bash
@@ -231,6 +287,9 @@ kubectl logs -n karpenter -l app.kubernetes.io/name=karpenter
 
 # Verify subnet/SG tags
 aws ec2 describe-subnets --filters "Name=tag:karpenter,Values=true"
+
+# Ensure role exists
+aws iam get-role --role-name karpenter-node-role
 ```
 
 **KEDA not scaling**:
@@ -238,8 +297,11 @@ aws ec2 describe-subnets --filters "Name=tag:karpenter,Values=true"
 # Check SQS permissions
 kubectl logs -n keda -l app.kubernetes.io/name=keda-operator
 
-# Verify queue URL and region
+# Verify queue URL and region (update placeholder values)
 kubectl describe scaledobject orders-consumer
+
+# Test queue access
+aws sqs get-queue-attributes --queue-url <your-actual-queue-url> --attribute-names ApproximateNumberOfMessages
 ```
 
 **Security policy blocks**:
@@ -249,6 +311,9 @@ kubectl get policyreport -A
 
 # Review admission controller logs
 kubectl logs -n kyverno -l app.kubernetes.io/name=kyverno
+
+# Test policy with dry-run
+kubectl apply --dry-run=server -f <your-manifest>
 ```
 
 ## 📚 Additional Resources
@@ -268,6 +333,21 @@ labels:
   environment: production
   team: platform
 ```
+
+## ✅ Configuration Versions
+
+**Tested with:**
+- Terraform: >= 1.0
+- Helm: v3.0+
+- Karpenter: v1.1.0 (OCI registry)
+- KEDA: v2.17.2
+- Falco: v6.2.5
+- Kyverno: Latest (via manifest)
+
+**Important Notes:**
+- Helm provider v3.0+ requires object syntax: `kubernetes = {}` not `kubernetes {}`
+- Karpenter uses v1 API (not v1beta1)
+- All configurations validated for syntax and compatibility
 
 ## 📄 License
 

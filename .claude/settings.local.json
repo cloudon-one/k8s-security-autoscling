@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(terraform fmt:*)",
+      "Bash(terraform validate:*)",
+      "Bash(cd:*)",
+      "Bash(kubectl --dry-run=client apply -f autoscaling/manifests/)",
+      "Bash(kubectl --dry-run=client apply -f security/)",
+      "Bash(kubectl --dry-run=client --validate=false apply -f autoscaling/manifests/)",
+      "Bash(kubectl --dry-run=client --validate=false apply -f security/ --ignore-not-found)",
+      "Bash(python3:*)",
+      "Bash(terraform plan:*)",
+      "Bash(helm repo add:*)",
+      "Bash(helm repo:*)",
+      "Bash(helm search:*)",
+      "Bash(helm pull:*)",
+      "Bash(helm show chart:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,10 +1,10 @@
 # Install CRDs first
 resource "helm_release" "karpenter_crds" {
-  name       = "karpenter-crd"
-  repository = "oci://public.ecr.aws/karpenter/karpenter-crd"
-  chart      = "karpenter-crd"
-  version    = var.karpenter_chart_version
-  namespace  = var.karpenter_namespace
+  name             = "karpenter-crd"
+  repository       = "oci://public.ecr.aws/karpenter/karpenter-crd"
+  chart            = "karpenter-crd"
+  version          = var.karpenter_chart_version
+  namespace        = var.karpenter_namespace
   create_namespace = true
 }
 
@@ -26,13 +26,13 @@ resource "helm_release" "karpenter" {
       }
     }
     settings = {
-      clusterName   = var.cluster_name
+      clusterName       = var.cluster_name
       interruptionQueue = "" # optional: if using interruption handling via SQS
     }
     controller = {
       resources = {
         requests = { cpu = "200m", memory = "256Mi" }
-        limits   = { cpu = "1",    memory = "512Mi" }
+        limits   = { cpu = "1", memory = "512Mi" }
       }
     }
   })]

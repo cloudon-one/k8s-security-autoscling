@@ -88,8 +88,8 @@ data "aws_iam_policy_document" "karpenter_controller" {
   # PassRole to node instance profile role; replace with your node role ARN if needed
   # Broad by default; tighten to specific role ARNs when known
   statement {
-    effect = "Allow"
-    actions = ["iam:PassRole"]
+    effect    = "Allow"
+    actions   = ["iam:PassRole"]
     resources = ["*"]
     condition {
       test     = "StringEquals"
