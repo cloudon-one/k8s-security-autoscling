@@ -1,0 +1,37 @@
+# Admission — Kyverno baseline + no :latest + require limits
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: admission-basics
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: no-privileged
+      match: { any: [ { resources: { kinds: ["Pod","Deployment","StatefulSet","DaemonSet","Job","CronJob"] } } ] }
+      validate:
+        message: "Privileged containers are not allowed."
+        pattern: { spec: { containers: [ { securityContext: { privileged: false } } ] } }
+    - name: require-non-root
+      match: { any: [ { resources: { kinds: ["Pod","Deployment","StatefulSet","DaemonSet","Job","CronJob"] } } ] }
+      validate:
+        message: "Run as non-root is required."
+        pattern:
+          spec:
+            securityContext: { runAsNonRoot: true }
+            containers: [ { securityContext: { runAsNonRoot: true } } ]
+    - name: disallow-latest
+      match: { any: [ { resources: { kinds: ["Pod"] } } ] }
+      validate:
+        message: "Do not use :latest."
+        pattern: { spec: { containers: [ { image: "!*:latest" } ], initContainers: [ { image: "!*:latest" } ] } }
+    - name: require-requests-limits
+      match: { any: [ { resources: { kinds: ["Pod"] } } ] }
+      validate:
+        message: "CPU and memory requests/limits are required."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests: { cpu: "?*", memory: "?*" }
+                  limits:   { cpu: "?*", memory: "?*" }

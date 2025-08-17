@@ -1,0 +1,33 @@
+# Compliance — Kube-bench on each node (DaemonSet-like Job pattern)
+apiVersion: batch/v1
+kind: DaemonSet  # run on all nodes; kube-bench autodetects
+metadata:
+  name: kube-bench
+  namespace: security
+spec:
+  selector:
+    matchLabels: { app: kube-bench }
+  template:
+    metadata:
+      labels: { app: kube-bench }
+    spec:
+      hostPID: true
+      serviceAccountName: security-tools
+      tolerations: [ { operator: "Exists" } ]
+      containers:
+        - name: kube-bench
+          image: aquasec/kube-bench:latest
+          securityContext:
+            runAsUser: 0
+          command: ["kube-bench","--json"]
+          volumeMounts:
+            - { name: var-lib-etcd,       mountPath: /var/lib/etcd,       readOnly: true }
+            - { name: var-lib-kubelet,    mountPath: /var/lib/kubelet,    readOnly: true }
+            - { name: etc-systemd,        mountPath: /etc/systemd,        readOnly: true }
+            - { name: etc-kubernetes,     mountPath: /etc/kubernetes,     readOnly: true }
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - { name: var-lib-etcd,    hostPath: { path: /var/lib/etcd } }
+        - { name: var-lib-kubelet, hostPath: { path: /var/lib/kubelet } }
+        - { name: etc-systemd,     hostPath: { path: /etc/systemd } }
+        - { name: etc-kubernetes,  hostPath: { path: /etc/kubernetes } }

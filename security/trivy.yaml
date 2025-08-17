@@ -1,0 +1,23 @@
+# .github/workflows/security.yml
+name: security
+on: [pull_request, push]
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy IaC scan (K8s/Helm/Terraform)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+      - name: Build image
+        run: docker build -t ghcr.io/org/app:${{ github.sha }} .
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/org/app:${{ github.sha }}
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          format: table

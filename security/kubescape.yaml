@@ -1,0 +1,25 @@
+# Compliance/Posture — Kubescape scheduled scan
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kubescape-daily
+  namespace: security
+spec:
+  schedule: "15 2 * * *"  # daily 02:15
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: security-tools
+          restartPolicy: OnFailure
+          containers:
+            - name: kubescape
+              image: quay.io/kubescape/kubescape:latest
+              args:
+                - scan
+                - framework
+                - nsa,mitre,cis-1.24
+                - --format
+                - json
+                - --output
+                - /tmp/kubescape-$(date +%F).json

@@ -1,0 +1,23 @@
+# Runtime — Falco via Helm values, with Slack via Falcosidekick
+# Save as falco-values.yaml and install with:
+#   helm repo add falcosecurity https://falcosecurity.github.io/charts
+#   helm install falco falcosecurity/falco -n security -f falco-values.yaml
+falco:
+  rulesFiles:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+  json_output: true
+  json_include_output_property: true
+falcosidekick:
+  enabled: true
+  config:
+    slack:
+      webhookurl: "https://hooks.slack.com/services/T000/B000/XXXX"
+      minimumpriority: "warning"
+  webui:
+    enabled: false
+serviceAccount:
+  create: false
+  name: security-tools
+rbac:
+  create: true
