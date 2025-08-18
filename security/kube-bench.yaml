@@ -11,14 +11,23 @@ spec:
     metadata:
       labels: { app: kube-bench }
     spec:
-      hostPID: true
       serviceAccountName: security-tools
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
       tolerations: [ { operator: "Exists" } ]
       containers:
         - name: kube-bench
           image: aquasec/kube-bench:latest
           securityContext:
-            runAsUser: 0
+            runAsNonRoot: true
+            runAsUser: 65534
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           command: ["kube-bench","--json"]
           volumeMounts:
             - { name: var-lib-etcd,       mountPath: /var/lib/etcd,       readOnly: true }

@@ -12,9 +12,21 @@ spec:
         spec:
           serviceAccountName: security-tools
           restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            fsGroup: 65534
           containers:
             - name: kubescape
               image: quay.io/kubescape/kubescape:latest
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 65534
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
               args:
                 - scan
                 - framework
